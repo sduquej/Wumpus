@@ -8,8 +8,24 @@ import java.util.concurrent.ThreadLocalRandom;
 public class World {
     private int width;
     private int length;
-    private static CaveItem[][] cave;
+    private static CaveRoom[][] cave;
 
+    private class Position{
+        private int x,y;
+
+        public Position(int x, int y) {
+            this.x = x;
+            this.y = y;
+        }
+
+        public int getX() {
+            return x;
+        }
+
+        public int getY() {
+            return y;
+        }
+    }
     public enum CaveItem {
         EMPTY {
             @Override
@@ -87,7 +103,7 @@ public class World {
     public World(int length, int width) {
         this.width = width;
         this.length = length;
-        this.cave = new CaveItem[length][width];
+        this.cave = new CaveRoom[length][width];
 
 
         initiateCave(0.10);
@@ -102,7 +118,7 @@ public class World {
      */
     private void placeWumpus() {
         int wumpusPosition, row, col;
-        do {
+
             wumpusPosition = ThreadLocalRandom.current().nextInt(1, (this.length * this.width) + 1);
             row = wumpusPosition / this.width;
             col = wumpusPosition % this.width;
@@ -112,9 +128,8 @@ public class World {
                 row = row - 1;
                 col = this.width - 1;
             }
-        } while(!addSignalToCell(row, col, CaveItem.WUMPUS));
+        cave[row][col].setWumpus(true);
         createStenchOnAdjacentCells(row, col);
-
     }
 
     /**
@@ -124,7 +139,7 @@ public class World {
     private void initiateCave(double pitPercentage){
         for (int i = 0; i < this.length; i++) {
             for (int j = 0; j < this.width; j++) {
-                cave[i][j] = Math.random() < pitPercentage ? CaveItem.PIT : CaveItem.EMPTY;
+                cave[i][j] = new CaveRoom(Math.random() < pitPercentage); //? CaveItem.PIT : CaveItem.EMPTY;
             }
         }
     }
@@ -136,7 +151,7 @@ public class World {
     private void identifyPits(){
         for (int i = 0; i < this.length; i++) {
             for (int j = 0; j < this.width; j++) {
-                if(cave[i][j] == CaveItem.PIT){
+                if(cave[i][j].isPit()){
                     createBreezeOnAdjacentCells(i, j);
                 }
             }
@@ -145,36 +160,43 @@ public class World {
 
     /**
      * Given the position of a pit, creates breeze in the adjacent cells.
-     * Simpler API that uses createSignalOnAdjacentCells()
+     * Simpler API that uses obtainNeighbours()
      * @param column column in which the pit is located
      * @param row row in which the pit is located
      */
     private void createBreezeOnAdjacentCells(int column, int row){
-        createSignalOnAdjacentCells(column, row, CaveItem.BREEZE);
+        Position[] neighbours = obtainAdjacentCells(column, row);
+        for (Position pos : neighbours) {
+            cave[pos.x][pos.y].setBreezy(true);
+        }
     }
 
     /**
      * Given the position of a wumpus, creates stench in the adjacent cells.
-     * Simpler API that uses createSignalOnAdjacentCells()
+     * Simpler API that uses obtainNeighbours()
      * @param column column in which the wumpus is located
      * @param row row in which the wumpus is located
      */
     private void createStenchOnAdjacentCells(int row, int column){
-        createSignalOnAdjacentCells(row, column, CaveItem.STENCH);
+        obtainAdjacentCells(row, column);
     }
 
     /**
      * Given the position of a cell, creates the given signal in the adjacent cells.
      * Because the cave is a torus it must be considered when the pit is in one of the, otherwise, edges of the cave
-     * @param column column in which the centre is located
      * @param row row in which the centre is located
+     * @param column column in which the centre is located
      */
-    private void createSignalOnAdjacentCells(int row, int column, CaveItem signal){
-        addSignalToCell(((row + 1) % this.length + this.length) % this.length, column, signal);
-        addSignalToCell(((row - 1) % this.length + this.length) % this.length, column, signal);
+    private Position[] obtainAdjacentCells(int row, int column){
+        Position [] neighbours = new Position[4];
 
-        addSignalToCell(row, ((column + 1) % this.width + this.width) % this.width, signal);
-        addSignalToCell(row, ((column - 1) % this.width + this.width) % this.width, signal);
+        neighbours[0] = new Position(((row + 1) % this.length + this.length) % this.length, column);
+        neighbours[1] = new Position(((row - 1) % this.length + this.length) % this.length, column);
+
+        neighbours[2] = new Position(row, ((column + 1) % this.width + this.width) % this.width);
+        neighbours[3] = new Position(row, ((column - 1) % this.width + this.width) % this.width);
+
+        return neighbours;
     }
 
     /**
@@ -185,18 +207,18 @@ public class World {
      * @param signal signal that will be perceived in the cell
      * @return boolean indicating whether the signal was added or not
      */
-    private boolean addSignalToCell(int row, int column, CaveItem signal){
-        if(cave[row][column] == CaveItem.EMPTY){
-            cave[row][column] = signal;
-            return true;
-        }
-        return false;
-    }
+//    private boolean addSignalToCell(int row, int column, CaveItem signal){
+//        if(cave[row][column] == CaveItem.EMPTY){
+//            cave[row][column] = signal;
+//            return true;
+//        }
+//        return false;
+//    }
 
     //    TODO remove this method
-    public void placeItemInCave(int x, int y, CaveItem item){
-        cave[x][y] = item;
-    }
+//    public void placeItemInCave(int x, int y, CaveItem item){
+//        cave[x][y] = item;
+//    }
 
     /**
      * Overrides Object.toString() to return a String that can be printed to
@@ -217,17 +239,17 @@ public class World {
         return sb.toString();
     }
 
-    private String printRow(CaveItem[] row) {
+    private String printRow(CaveRoom[] row) {
         StringBuilder sb = new StringBuilder();
         String cellRepresentation;
-        for (CaveItem i : row) {
+        for (CaveRoom i : row) {
             try {
                 cellRepresentation = i.printInMap();
             }catch (NullPointerException ex){
                 System.err.println(i);
                 cellRepresentation = " ";
             }
-            sb.append(String.format("| %s ", cellRepresentation));
+            sb.append(String.format("|%3s", cellRepresentation));
         }
         sb.append("|\n");
         return sb.toString();

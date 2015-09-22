@@ -4,7 +4,7 @@ public class Main {
 
     public static void main(String[] args) {
 	// write your code here
-        World world = new World(4,20);
+        World world = new World(5,5);
 //        world.placeItemInCave(0, 0, World.CaveItem.ADVENTURER);
 //        world.placeItemInCave(0, 1, World.CaveItem.BREEZE);
 //        world.placeItemInCave(0, 2, World.CaveItem.PIT);
