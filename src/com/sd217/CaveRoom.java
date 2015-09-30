@@ -34,10 +34,10 @@ public class CaveRoom {
                             (pit ? ColorCodes.RED + "P" : "") +
                             (containsTreasure ? ColorCodes.YELLOW + "T" : "") +
                             (wumpus ? ColorCodes.RED + "W" : "") +
-                            (superbat ? ColorCodes.PURPLE + "}" : "") +
-                            (breezy ? ColorCodes.CYAN + "B" : "") +
+                            (superbat ? ColorCodes.PURPLE + "B" : "") +
+                            (breezy ? ColorCodes.CYAN + "~" : "") +
                             (stenchy ? ColorCodes.GREEN + "S" : "") +
-                            (glittery ? ColorCodes.YELLOW + "G" : "") +
+                            (glittery ? ColorCodes.YELLOW + "£" : "") +
                             (exit ? ColorCodes.BLUE + "E" : "")
             );
         }
@@ -61,7 +61,8 @@ public class CaveRoom {
     }
 
     public boolean isEmpty() {
-        return !isPit() && !hasAdventurer() && !isBreezy() && !isStenchy() && isGlittery() && !hasWumpus();
+        return !isPit() && !hasAdventurer() && !isBreezy() &&
+                !isStenchy() && !isGlittery() && !hasWumpus() && !containsTreasure();
     }
 
     public boolean hasAdventurer() {
@@ -92,6 +93,14 @@ public class CaveRoom {
         return glittery;
     }
 
+    public boolean containsTreasure() {
+        return containsTreasure;
+    }
+
+    public void setContainsTreasure(boolean containsTreasure) {
+        this.containsTreasure = containsTreasure;
+    }
+
     public void setGlittery(boolean glittery) {
         this.glittery = glittery;
     }
@@ -102,5 +111,9 @@ public class CaveRoom {
 
     public void setWumpus(boolean wumpus) {
         this.wumpus = wumpus;
+    }
+
+    public void setAdventurer(boolean adventurer) {
+        this.adventurer = adventurer;
     }
 }

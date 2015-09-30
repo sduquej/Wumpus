@@ -1,69 +1,110 @@
 package com.sd217;
 
+import com.sd217.DynamicObjects.Adventurer;
+import com.sd217.DynamicObjects.Wumpus;
+import javafx.geometry.Pos;
+
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Created by sduquej on 17/09/15.
  */
 public class World {
-    private int width;
-    private int length;
+    public final int WIDTH, LENGTH;
     private static CaveRoom[][] cave;
+    private static Map<String, DynamicCaveObject> dynamicObjects = new HashMap<String, DynamicCaveObject>();
 
-    private class Position {
-        private int x, y;
-
-        public Position(int x, int y) {
-            this.x = x;
-            this.y = y;
-        }
-
-        public int getX() {
-            return x;
-        }
-
-        public int getY() {
-            return y;
-        }
-    }
 
     /**
      * Constructor
      * Creates the Wumpus world in which the agent will be trapped
-     *
+     *  The cave is a 2D-array of the form cave[row][column]
      * @param width  width of the cave
      * @param length length of the cave
      */
     public World(int length, int width) {
-        this.width = width;
-        this.length = length;
+        this.WIDTH = width;
+        this.LENGTH = length;
         this.cave = new CaveRoom[length][width];
 
 
         initiateCave(0.20);
+        placeTreasure();
+//        openExit();
         identifyPits();
         placeWumpus();
-//        openExit();
-//        placeTreasure();
+    }
+
+    private void placeTreasure() {
+//        The treasure won't be placed in a pit
+        Position randomTreasurePosition;
+        CaveRoom candidateRoom;
+        int posRow;
+        int posCol;
+        do {
+            randomTreasurePosition = getRandomPosition();
+            posRow = randomTreasurePosition.getRow();
+            posCol = randomTreasurePosition.getCol();
+            candidateRoom = cave[posRow][posCol];
+        } while(!candidateRoom.isEmpty());
+
+
+        cave[posRow][posCol].setContainsTreasure(true);
+        createGlitterOnAdjacentCells(posRow, posCol);
+    }
+
+    public void placeAdventurer(int column, int row){
+        Adventurer adv = Adventurer.getInstance();
+        if(!adv.isInit()){
+            adv.init(column, row, this);
+        }
+        cave[adv.getRow()][adv.getColumn()].setAdventurer(false);
+        cave[row][column].setAdventurer(true);
+    }
+
+    /**
+     * Moves the adventurer to the given position clearing the adventurer mark from the previous position
+     * @param p New position where the adventurer will be
+     */
+    public void moveAdventurer(Position p){
+        if(p != null) {
+            Adventurer adv = Adventurer.getInstance();
+            cave[adv.getRow()][adv.getColumn()].setAdventurer(false);
+            cave[p.getRow()][p.getCol()].setAdventurer(true);
+            adv.move(p);
+        }
     }
 
     /**
      * Puts the Wumpus in a random room inside the cave and spreads the stench to the adjacent rooms
      */
     private void placeWumpus() {
-        int wumpusPosition, row, col;
+        Position randomWumpusPosition = getRandomPosition();
+        int posRow = randomWumpusPosition.getRow();
+        int posCol = randomWumpusPosition.getCol();
+        Wumpus wumpus = Wumpus.getInstance();
+        if(!wumpus.isInit()){
+            wumpus.init(posCol, posRow, this);
+        }
+        cave[posRow][posCol].setWumpus(true);
+        createStenchOnAdjacentCells(posRow, posCol);
+    }
 
-        wumpusPosition = ThreadLocalRandom.current().nextInt(1, (this.length * this.width) + 1);
-        row = wumpusPosition / this.width;
-        col = wumpusPosition % this.width;
+    public Position getRandomPosition(){
+        int randomNumber = ThreadLocalRandom.current().nextInt(1, (LENGTH * WIDTH) + 1);
+        int row = randomNumber / WIDTH;
+        int col = randomNumber % WIDTH;
+
         if (col != 0) {
             col = col - 1;
         } else {
             row = row - 1;
-            col = this.width - 1;
+            col = WIDTH - 1;
         }
-        cave[row][col].setWumpus(true);
-        createStenchOnAdjacentCells(row, col);
+
+        return new Position(col, row);
     }
 
     /**
@@ -72,9 +113,9 @@ public class World {
      * @param pitPercentage the percentage of rooms that will be a pit
      */
     private void initiateCave(double pitPercentage) {
-        for (int i = 0; i < this.length; i++) {
-            for (int j = 0; j < this.width; j++) {
-                cave[i][j] = new CaveRoom(Math.random() < pitPercentage); //? CaveItem.PIT : CaveItem.EMPTY;
+        for (int i = 0; i < LENGTH; i++) {
+            for (int j = 0; j < WIDTH; j++) {
+                cave[i][j] = new CaveRoom(Math.random() < pitPercentage);
             }
         }
     }
@@ -84,8 +125,8 @@ public class World {
      * It will identify those cells where there are pits and create a breeze in the adjacent ones
      */
     private void identifyPits() {
-        for (int i = 0; i < this.length; i++) {
-            for (int j = 0; j < this.width; j++) {
+        for (int i = 0; i < LENGTH; i++) {
+            for (int j = 0; j < WIDTH; j++) {
                 if (cave[i][j].isPit()) {
                     createBreezeOnAdjacentCells(i, j);
                 }
@@ -95,7 +136,6 @@ public class World {
 
     /**
      * Given the position of a pit, creates breeze in the adjacent cells.
-     * Simpler API that uses obtainNeighbours()
      *
      * @param column column in which the pit is located
      * @param row    row in which the pit is located
@@ -103,13 +143,15 @@ public class World {
     private void createBreezeOnAdjacentCells(int column, int row) {
         Position[] neighbours = obtainAdjacentCells(column, row);
         for (Position pos : neighbours) {
-            cave[pos.x][pos.y].setBreezy(true);
+            CaveRoom room = cave[pos.getRow()][pos.getCol()];
+            if(!room.isPit()){
+                room.setBreezy(true);
+            }
         }
     }
 
     /**
      * Given the position of a wumpus, creates stench in the adjacent cells.
-     * Simpler API that uses obtainNeighbours()
      *
      * @param column column in which the wumpus is located
      * @param row    row in which the wumpus is located
@@ -117,10 +159,22 @@ public class World {
     private void createStenchOnAdjacentCells(int row, int column) {
         Position[] neighbours = obtainAdjacentCells(row, column);
         for (Position pos : neighbours) {
-            cave[pos.x][pos.y].setStenchy(true);
+            cave[pos.getRow()][pos.getCol()].setStenchy(true);
         }
     }
 
+    /**
+     * Given the position of the treasure, creates a glitter effect in the adjacent cells.
+     *
+     *  @param column column in which the treasure is located
+      * @param row    row in which the treasure is located
+     */
+    private void createGlitterOnAdjacentCells(int row, int column) {
+        Position[] neighbours = obtainAdjacentCells(row, column);
+        for (Position pos : neighbours) {
+            cave[pos.getRow()][pos.getCol()].setGlittery(true);
+        }
+    }
     /**
      * Given the position of a cell, creates the given signal in the adjacent cells.
      * Because the cave is a torus it must be considered when the pit is in one of the, otherwise, edges of the cave
@@ -128,16 +182,63 @@ public class World {
      * @param row    row in which the centre is located
      * @param column column in which the centre is located
      */
-    private Position[] obtainAdjacentCells(int row, int column) {
+    public Position[] obtainAdjacentCells(int row, int column) {
         Position[] neighbours = new Position[4];
 
-        neighbours[0] = new Position(((row + 1) % this.length + this.length) % this.length, column);
-        neighbours[1] = new Position(((row - 1) % this.length + this.length) % this.length, column);
+        neighbours[0] = getNeighbourRight(column, row);
+        neighbours[1] = getNeighbourLeft(column, row);
 
-        neighbours[2] = new Position(row, ((column + 1) % this.width + this.width) % this.width);
-        neighbours[3] = new Position(row, ((column - 1) % this.width + this.width) % this.width);
+        neighbours[2] = getNeighbourDown(column, row);
+        neighbours[3] = getNeighbourUp(column, row);
 
         return neighbours;
+    }
+
+    public Position getNeighbourInDirection(Position p, String direction){
+        if(p != null) {
+            Position pos = null;
+            switch (direction) {
+                case "up":
+                    p = getNeighbourUp(p);
+                    break;
+                case "down":
+                    p = getNeighbourDown(p);
+                    break;
+                case "left":
+                    p = getNeighbourLeft(p);
+                    break;
+                case "right":
+                    p = getNeighbourRight(p);
+                    break;
+            }
+        }
+        return p;
+    }
+
+    public Position getNeighbourLeft(Position p){
+        return getNeighbourLeft(p.getCol(), p.getRow());
+    }
+    public Position getNeighbourRight(Position p){
+        return getNeighbourRight(p.getCol(), p.getRow());
+    }
+    public Position getNeighbourUp(Position p){
+        return getNeighbourUp(p.getCol(), p.getRow());
+    }
+    public Position getNeighbourDown(Position p){
+        return getNeighbourDown(p.getCol(), p.getRow());
+    }
+
+    public Position getNeighbourLeft(int column, int row){
+        return new Position(((column - 1) % WIDTH + WIDTH) % WIDTH, row);
+    }
+    public Position getNeighbourRight(int column, int row){
+        return new Position(((column + 1) % WIDTH + WIDTH) % WIDTH, row);
+    }
+    public Position getNeighbourUp(int column, int row){
+        return new Position(column, ((row - 1) % LENGTH + LENGTH) % LENGTH);
+    }
+    public Position getNeighbourDown(int column, int row){
+        return new Position(column, ((row + 1) % LENGTH + LENGTH) % LENGTH);
     }
 
     /**
@@ -154,11 +255,6 @@ public class World {
 //            return true;
 //        }
 //        return false;
-//    }
-
-    //    TODO remove this method
-//    public void placeItemInCave(int x, int y, CaveItem item){
-//        cave[x][y] = item;
 //    }
 
     /**
@@ -191,7 +287,8 @@ public class World {
                 System.err.println("Empty cell error: " + i);
                 cellRepresentation = " ";
             }
-            sb.append(String.format("|%" + (12 + (10 * i.getNumberOfObjects())) + "s", cellRepresentation));
+            sb.append(String.format("|%" + ((3 + ColorCodes.RESET_STRING_LENGTH) +
+                    (ColorCodes.COLOR_STRING_LENGTH * i.getNumberOfObjects())) + "s", cellRepresentation));
         }
         sb.append("|\n");
         return sb.toString();
@@ -208,7 +305,7 @@ public class World {
         final String DASHES = "---";
         StringBuilder sb = new StringBuilder();
         sb.append("\t");
-        for (int i = 0; i < width; i++) {
+        for (int i = 0; i < WIDTH; i++) {
             sb.append(String.format(" %3s", header ? String.valueOf(i + 1) + " " : DASHES));
         }
         sb.append("\n");

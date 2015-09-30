@@ -20,6 +20,7 @@ import java.util.regex.Pattern;
  */
 public class ColorCodes {
 
+    public static final String CLEAR_SCREEN = "\033[H\033[2J";
     public static final String RESET = "\u001B[0;40;1m";
     public static final String BLACK = "\u001B[30;40;1m";
     public static final String RED = "\u001B[31;40;1m";
@@ -30,6 +31,8 @@ public class ColorCodes {
     public static final String CYAN = "\u001B[36;40;1m";
     public static final String WHITE = "\u001B[37;40;1m";
 
+    public static final int COLOR_STRING_LENGTH = YELLOW.length();
+    public static final int RESET_STRING_LENGTH = RESET.length();
 
     /**
      * Parses a string with ANSI color codes based on the input
