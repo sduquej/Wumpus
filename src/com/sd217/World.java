@@ -2,10 +2,6 @@ package com.sd217;
 
 import com.sd217.DynamicObjects.Adventurer;
 import com.sd217.DynamicObjects.Wumpus;
-import javafx.geometry.Pos;
-
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -14,8 +10,6 @@ import java.util.concurrent.ThreadLocalRandom;
 public class World {
     public final int WIDTH, LENGTH;
     private static CaveRoom[][] cave;
-    private static Map<String, DynamicCaveObject> dynamicObjects = new HashMap<String, DynamicCaveObject>();
-
 
     /**
      * Constructor
@@ -30,13 +24,17 @@ public class World {
         this.cave = new CaveRoom[length][width];
 
 
-        initiateCave(0.20);
+        initiateCave(0.10);
         placeTreasure();
-//        openExit();
         identifyPits();
         placeWumpus();
+//      placeSomeRandomBats
+
     }
 
+    /**
+     * Places the treasure in a random location that is safe
+     */
     private void placeTreasure() {
 //        The treasure won't be placed in a pit
         Position randomTreasurePosition;
@@ -48,33 +46,71 @@ public class World {
             posRow = randomTreasurePosition.getRow();
             posCol = randomTreasurePosition.getCol();
             candidateRoom = cave[posRow][posCol];
-        } while(!candidateRoom.isEmpty());
+        } while(!candidateRoom.isRoomSafe());
 
 
-        cave[posRow][posCol].setContainsTreasure(true);
-        createGlitterOnAdjacentCells(posRow, posCol);
-    }
-
-    public void placeAdventurer(int column, int row){
-        Adventurer adv = Adventurer.getInstance();
-        if(!adv.isInit()){
-            adv.init(column, row, this);
-        }
-        cave[adv.getRow()][adv.getColumn()].setAdventurer(false);
-        cave[row][column].setAdventurer(true);
+        candidateRoom.setContainsTreasure(true);
+        setGlitterOnAdjacentCells(posRow, posCol, true);
     }
 
     /**
-     * Moves the adventurer to the given position clearing the adventurer mark from the previous position
-     * @param p New position where the adventurer will be
+     * Removes the treasure from the given position, provided it is there.
+     * @param treasurePosition Position from which the treasure is to be removed
+     * @return boolean - true if the room in the given position had the treasure and it was removed, false otherwise.
      */
-    public void moveAdventurer(Position p){
-        if(p != null) {
-            Adventurer adv = Adventurer.getInstance();
-            cave[adv.getRow()][adv.getColumn()].setAdventurer(false);
-            cave[p.getRow()][p.getCol()].setAdventurer(true);
-            adv.move(p);
+    public boolean removeTreasure(Position treasurePosition) {
+        boolean treasureRemoved = false;
+        int posRow = treasurePosition.getRow();
+        int posCol = treasurePosition.getCol();
+        CaveRoom treasureRoom = cave[posRow][posCol];
+        if(treasureRoom.containsTreasure()){
+            treasureRoom.setContainsTreasure(false);
+            setGlitterOnAdjacentCells(posRow, posCol, false);
+            treasureRemoved = true;
         }
+        return treasureRemoved;
+    }
+
+    /**
+     * This method must be called to place the adventurer in its starting position.
+     * The current cave design places the exit in this same room.
+     * @param adventurer adventurer that will be placed in the cave
+     */
+    public void placeAdventurer(DynamicCaveObject adventurer){
+        Adventurer adv = (Adventurer) adventurer;
+        if(adv.isInit()) {
+            CaveRoom room = getRoomInPosition(adv.getCurrentPosition());
+            room.setAdventurer(true);
+            room.setExit(true);
+        }
+    }
+
+    /**
+     * Moves the given dynamic object to a specified position, or to a random neighbouring position otherwise
+     * @param dynamicObject Dynamic Object to be moved - Adventurer or Wumpus
+     * @param p - Position to which the object will be moved. If is null it will be chosen at random from one of the
+     *          neighbours.
+     */
+    public void moveDynamicObject(DynamicCaveObject dynamicObject, Position p){
+        int oldRow = dynamicObject.getRow();
+        int oldCol = dynamicObject.getColumn();
+        if(p == null) {
+//            If a location is not specified, it moves to a random neighbour
+            p = obtainAdjacentCells(oldRow, oldCol)[ThreadLocalRandom.current().nextInt(0, 3 + 1)];
+        }
+        int newRow = p.getRow();
+        int newCol = p.getCol();
+        if(dynamicObject instanceof Adventurer) {
+            cave[oldRow][oldCol].setAdventurer(false);
+            cave[newRow][newCol].setAdventurer(true);
+        } else if(dynamicObject instanceof Wumpus){
+            cave[oldRow][oldCol].setWumpus(false);
+            setStenchOnAdjacentCells(oldRow, oldCol, false);
+
+            cave[newRow][newCol].setWumpus(true);
+            setStenchOnAdjacentCells(newRow, newCol, true);
+        }
+        dynamicObject.move(p);
     }
 
     /**
@@ -89,9 +125,13 @@ public class World {
             wumpus.init(posCol, posRow, this);
         }
         cave[posRow][posCol].setWumpus(true);
-        createStenchOnAdjacentCells(posRow, posCol);
+        setStenchOnAdjacentCells(posRow, posCol, true);
     }
 
+    /**
+     * Retrieves a random position on the cave
+     * @return Position that was obtained randomly
+     */
     public Position getRandomPosition(){
         int randomNumber = ThreadLocalRandom.current().nextInt(1, (LENGTH * WIDTH) + 1);
         int row = randomNumber / WIDTH;
@@ -151,30 +191,45 @@ public class World {
     }
 
     /**
-     * Given the position of a wumpus, creates stench in the adjacent cells.
+     * Given the position of a wumpus, sets the stench in the adjacent cells.
      *
      * @param column column in which the wumpus is located
      * @param row    row in which the wumpus is located
+     * @param stench whether the cells are to be stenchy or not
      */
-    private void createStenchOnAdjacentCells(int row, int column) {
+    private void setStenchOnAdjacentCells(int row, int column, boolean stench) {
         Position[] neighbours = obtainAdjacentCells(row, column);
         for (Position pos : neighbours) {
-            cave[pos.getRow()][pos.getCol()].setStenchy(true);
+            cave[pos.getRow()][pos.getCol()].setStenchy(stench);
         }
     }
 
     /**
      * Given the position of the treasure, creates a glitter effect in the adjacent cells.
      *
-     *  @param column column in which the treasure is located
-      * @param row    row in which the treasure is located
+     * @param row    row in which the treasure is located
+     * @param column column in which the treasure is located
+     * @param treasure
      */
-    private void createGlitterOnAdjacentCells(int row, int column) {
+    private void setGlitterOnAdjacentCells(int row, int column, boolean treasure) {
         Position[] neighbours = obtainAdjacentCells(row, column);
         for (Position pos : neighbours) {
-            cave[pos.getRow()][pos.getCol()].setGlittery(true);
+            cave[pos.getRow()][pos.getCol()].setGlittery(treasure);
         }
     }
+
+    /**
+     * Given a position returns the room in the cave that is occupying it
+     * @param p Position of interest
+     * @return CaveRoom that is in the given position
+     */
+    public CaveRoom getRoomInPosition(Position p){
+        int row = p.getRow();
+        int col = p.getCol();
+
+        return cave[row][col];
+    }
+//    Locating neighbours and adjacent cells
     /**
      * Given the position of a cell, creates the given signal in the adjacent cells.
      * Because the cave is a torus it must be considered when the pit is in one of the, otherwise, edges of the cave
@@ -195,24 +250,24 @@ public class World {
     }
 
     public Position getNeighbourInDirection(Position p, String direction){
+        Position pos = null;
         if(p != null) {
-            Position pos = null;
             switch (direction) {
                 case "up":
-                    p = getNeighbourUp(p);
+                    pos = getNeighbourUp(p);
                     break;
                 case "down":
-                    p = getNeighbourDown(p);
+                    pos = getNeighbourDown(p);
                     break;
                 case "left":
-                    p = getNeighbourLeft(p);
+                    pos = getNeighbourLeft(p);
                     break;
                 case "right":
-                    p = getNeighbourRight(p);
+                    pos = getNeighbourRight(p);
                     break;
             }
         }
-        return p;
+        return pos;
     }
 
     public Position getNeighbourLeft(Position p){
@@ -240,23 +295,9 @@ public class World {
     public Position getNeighbourDown(int column, int row){
         return new Position(column, ((row + 1) % LENGTH + LENGTH) % LENGTH);
     }
+//  END OF  Locating neighbours and adjacent cells
 
-    /**
-     * Given the coordinates of a cell, adds the signal to it
-     * TODO: instead of just replacing empty cells make it so multiple signals can be together
-     * @param column column in which the signal is added
-     * @param row row in which the signal is added
-     * @param signal signal that will be perceived in the cell
-     * @return boolean indicating whether the signal was added or not
-     */
-//    private boolean addSignalToCell(int row, int column, CaveItem signal){
-//        if(cave[row][column] == CaveItem.EMPTY){
-//            cave[row][column] = signal;
-//            return true;
-//        }
-//        return false;
-//    }
-
+//  BEGIN   Printing the world
     /**
      * Overrides Object.toString() to return a String that can be printed to
      * represent the current status of the WumpusWorld
@@ -311,4 +352,5 @@ public class World {
         sb.append("\n");
         return sb.toString();
     }
+//  END OF   Printing the world
 }

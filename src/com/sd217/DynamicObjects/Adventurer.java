@@ -17,11 +17,14 @@ public class Adventurer extends DynamicCaveObject {
         super();
     }
 
+
+
     @Override
     public boolean move(Position p) {
         boolean moved = false;
         if(isAlive()){
             if(!getCurrentPosition().equals(p)){
+                setPreviousPosition(getCurrentPosition());
                 setCurrentPosition(p);
                 moved = true;
             }
@@ -33,4 +36,5 @@ public class Adventurer extends DynamicCaveObject {
     public String whoAmI() {
         return "adventurer";
     }
+
 }

@@ -1,7 +1,6 @@
 package com.sd217;
 
 import com.sd217.Exceptions.AlreadyDeadException;
-import javafx.geometry.Pos;
 
 import java.awt.*;
 
@@ -11,8 +10,9 @@ import java.awt.*;
 public abstract class DynamicCaveObject {
     private World world;
     private Position currentPosition;
+    private Position previousPosition;
     private boolean alive, init;
-
+    private boolean hasTreasure;
     protected DynamicCaveObject() {
         this.alive = true;
     }
@@ -32,8 +32,14 @@ public abstract class DynamicCaveObject {
     public String killedBy(String killer){
         if(!this.isAlive()) throw new AlreadyDeadException(whoAmI());
         setAlive(false);
-        return ColorCodes.RED + whoAmI() + ColorCodes.GREEN + " has been killed by the " + ColorCodes.YELLOW + killer;
+        return ColorCodes.RED + whoAmI() + ColorCodes.GREEN + " has been killed by the " +
+                ColorCodes.RED + killer + ColorCodes.RESET;
     }
+
+    public boolean atLocation(Position p){
+        return this.getCurrentPosition().equals(p);
+    }
+
     public boolean atLocation(int col, int row){
         return getCurrentPosition().getCol() == col & getCurrentPosition().getRow() == row;
     }
@@ -69,5 +75,21 @@ public abstract class DynamicCaveObject {
     }
     public boolean isInit() {
         return init;
+    }
+    public Position getPreviousPosition() {
+        return previousPosition;
+    }
+
+    protected void setPreviousPosition(Position previousPosition) {
+        this.previousPosition = previousPosition;
+    }
+
+    public boolean hasTreasure() {
+        return hasTreasure;
+    }
+
+    public void setTreasure(boolean hasTreasure) {
+        System.out.println(ColorCodes.GREEN + whoAmI() + " has collected the " + ColorCodes.YELLOW + "treasure.");
+        this.hasTreasure = hasTreasure;
     }
 }

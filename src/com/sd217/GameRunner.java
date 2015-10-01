@@ -53,7 +53,7 @@ public class GameRunner {
                 System.out.print("Click! .... Click! ... Your torch goes off as you go completely blind hopeless");
             }
         } else {
-            System.out.print("You made it out of Wumpus World. Congratulations!");
+            System.out.print("You made it out of Wumpus World in " + moves + " moves. Congratulations!");
         }
     }
 
@@ -72,19 +72,22 @@ public class GameRunner {
             Position roomInChosenDirection= world.getNeighbourInDirection(adventurer.getCurrentPosition(), direction);
 //            Perform Action
             if(action == "move"){
-                world.moveAdventurer(roomInChosenDirection);
+                world.moveDynamicObject(adventurer, roomInChosenDirection);
             } else if (action == "shoot"){
                 validActions.remove('S');
-                if(wumpus.getCurrentPosition().equals(roomInChosenDirection)){
+                if(wumpus.atLocation(roomInChosenDirection)){
                     System.out.println(MessageBuilder.wumpusHit());
                     System.out.println(wumpus.killedBy("arrow"));
                 }else{
                     System.out.println(MessageBuilder.arrowLost());
-//                wumpus.move(direction);
+                    world.moveDynamicObject(Wumpus.getInstance(), null);
                 }
             }
-//            Notify Changes (player dead/wumpus killed/treasure collected/exit found)
             steps++;
+            if(endOfTurn()){
+                break;
+            }
+//            Notify Changes (player dead/wumpus killed/treasure collected/exit found)
         }
         return steps;
     }
@@ -105,10 +108,46 @@ public class GameRunner {
         System.out.print("Where should we place the Adventurer? (Row)(1 - " + caveHeight + ")");
         int advInitRow = ConsoleReader.readInt(1, caveHeight) - 1;
         DynamicCaveObject adv = Adventurer.getInstance().init(advInitCol, advInitRow, w);
-        w.placeAdventurer(adv.getColumn(), adv.getRow());
+        w.placeAdventurer(adv);
         this.adventurer = adv;
 
         return w;
+    }
+
+    /**
+     * This method is run at the end of every turn, it returns a boolean that indicates if the game is over or not
+     * @return
+     */
+    private boolean endOfTurn(){
+        boolean gameFinished = false;
+        Position adventurerPosition = adventurer.getCurrentPosition();
+        if(wumpus.atLocation(adventurerPosition)){
+            System.out.println(adventurer.killedBy(wumpus.whoAmI()));
+            return true;
+        }
+        CaveRoom currentRoom = world.getRoomInPosition(adventurerPosition);
+        if(currentRoom.isPit()){
+            System.out.println(adventurer.killedBy("pit"));
+            return true;
+        }
+        if(currentRoom.isExit() && adventurer.hasTreasure()){
+            gameOverWin = true;
+            return true;
+        }
+        if(currentRoom.containsTreasure() && world.removeTreasure(adventurerPosition)){
+            adventurer.setTreasure(true);
+        }
+        if(currentRoom.hasSuperbat()){
+            Position randomPosition;
+            CaveRoom caveRoom;
+            do{
+                randomPosition = world.getRandomPosition();
+                caveRoom = world.getRoomInPosition(randomPosition);
+            } while (!caveRoom.isRoomSafe());
+            world.moveDynamicObject(adventurer, randomPosition);
+        }
+
+        return gameFinished;
     }
 
     private String askAction(){

@@ -16,13 +16,9 @@ public class CaveRoom {
     private boolean stenchy;
     private boolean glittery;
     private boolean exit;
-    private int x, y;
-    private int numObjects;
 
     public CaveRoom(boolean isPit) {
         this.pit = isPit;
-//        this.empty = !isPit;
-
     }
 
     public String printInMap() {
@@ -38,7 +34,7 @@ public class CaveRoom {
                             (breezy ? ColorCodes.CYAN + "~" : "") +
                             (stenchy ? ColorCodes.GREEN + "S" : "") +
                             (glittery ? ColorCodes.YELLOW + "£" : "") +
-                            (exit ? ColorCodes.BLUE + "E" : "")
+                            (exit ? ColorCodes.WHITE + "E" : "")
             );
         }
         roomAsString.append(ColorCodes.RESET);
@@ -62,9 +58,12 @@ public class CaveRoom {
 
     public boolean isEmpty() {
         return !isPit() && !hasAdventurer() && !isBreezy() &&
-                !isStenchy() && !isGlittery() && !hasWumpus() && !containsTreasure();
+                !isStenchy() && !isGlittery() && !hasWumpus() && !containsTreasure() && !isExit();
     }
 
+    public boolean isRoomSafe() {
+        return !isPit() && !hasWumpus() && !hasSuperbat();
+    }
     public boolean hasAdventurer() {
         return adventurer;
     }
@@ -115,5 +114,21 @@ public class CaveRoom {
 
     public void setAdventurer(boolean adventurer) {
         this.adventurer = adventurer;
+    }
+
+    public boolean hasSuperbat() {
+        return superbat;
+    }
+
+    public void setSuperbat(boolean superbat) {
+        this.superbat = superbat;
+    }
+
+    public boolean isExit() {
+        return exit;
+    }
+
+    public void setExit(boolean exit) {
+        this.exit = exit;
     }
 }

@@ -20,7 +20,14 @@ public class Wumpus extends DynamicCaveObject {
 
     @Override
     public boolean move(Position p) {
-        return false;
+        boolean moved = false;
+        if(isAlive()){
+            if(!getCurrentPosition().equals(p)){
+                setCurrentPosition(p);
+                moved = true;
+            }
+        }
+        return moved;
     }
 
     @Override
