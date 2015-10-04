@@ -17,8 +17,16 @@ import java.util.Collections;
 import java.util.Hashtable;
 import java.util.Map;
 
+/**
+ * Created by Sebastián Duque on 17/09/15.
+ * Main class and entry point.
+ */
 public class GameRunner {
-    private static final int TORCH_DURATION = 200; //5;
+    /**
+     * Duration of the torch. Once this number of steps are used the player loses
+     * as the torch goes off.
+     */
+    private static final int TORCH_DURATION = 200;
     public static final int MIN_DIMENSION = 1;
     public static final int MAX_DIMENSION = 100;
     public static final Map<Integer, String> PLAYER_TYPES;
@@ -185,7 +193,7 @@ public class GameRunner {
     }
 
     /**
-     * This method is run at the end of every turn, it returns a boolean that indicates if the game is over or not
+     * This method runs at the end of every turn, it returns a boolean that indicates if the game is over or not
      * @return boolean - whether the game is over or not as a result of the last action
      */
     private boolean endOfTurn(){
