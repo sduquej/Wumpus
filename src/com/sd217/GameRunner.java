@@ -27,7 +27,7 @@ public class GameRunner {
      * as the torch goes off.
      */
     private static final int TORCH_DURATION = 200;
-    public static final int MIN_DIMENSION = 1;
+    public static final int MIN_DIMENSION = 2;
     public static final int MAX_DIMENSION = 100;
     public static final Map<Integer, String> PLAYER_TYPES;
     static {
@@ -65,7 +65,7 @@ public class GameRunner {
 //        Print the world that got generated
         System.out.println(w);
 //        Place the adventurer
-        DynamicCaveObject adv = placeAdventurer(w);
+        DynamicCaveObject adv = placeAdventurer();
         w.placeAdventurer(adv);
         this.adventurer = adv;
 //        Select the player
@@ -87,12 +87,12 @@ public class GameRunner {
 
         if (!gr.gameOverWin) {
             if (!gr.adventurer.isAlive()) {
-                System.out.print("Oh sod! You died X_X");
+                System.out.println("Oh sod! You died X_X");
             } else if (moves == TORCH_DURATION) {
-                System.out.print("Click! .... Click! ... Your torch goes off as you go completely blind hopeless");
+                System.out.println("Click! .... Click! ... Your torch goes off as you go completely blind hopeless");
             }
         } else {
-            System.out.print("You made it out of Wumpus World in " + moves + " moves. " +
+            System.out.println("You made it out of Wumpus World in " + moves + " moves. " +
                     ColorCodes.GREEN + "Congratulations!");
         }
     }
@@ -142,10 +142,12 @@ public class GameRunner {
 
 
 
-    private DynamicCaveObject placeAdventurer(World world){
-        System.out.print("Where should we place the Adventurer? (Column)(1 - " + caveWidth + ")");
+    private DynamicCaveObject placeAdventurer(){
+        System.out.println(ColorCodes.GREEN + "Now that you know how the cave looks like it's up to you to decide. " +
+                "What will be the adventurer's starting position?");
+        System.out.print("Column (1 - " + caveWidth + "): ");
         int advInitCol = ConsoleReader.readInt(1, caveWidth) - 1;
-        System.out.print("Where should we place the Adventurer? (Row)(1 - " + caveHeight + ")");
+        System.out.print("Row (1 - " + caveHeight + "): ");
         int advInitRow = ConsoleReader.readInt(1, caveHeight) - 1;
         return  Adventurer.getInstance().init(advInitCol, advInitRow);
     }
@@ -157,8 +159,7 @@ public class GameRunner {
     private void slowExecution(){
         if (!(player instanceof HumanPlayer)){
             try {
-                Thread.sleep(0);
-//                Thread.sleep(1500);
+                Thread.sleep(1500);
             } catch (InterruptedException e) {
                 System.err.println("Woke up from the timer");
             }

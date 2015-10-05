@@ -26,16 +26,16 @@ public class MessageBuilder {
     }
 
     public static String gameIntroduction(){
-        StringBuilder sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder(ColorCodes.CLEAR_SCREEN);
         sb.append(ColorCodes.GREEN + "Hello and welcome to Wumpus World\n\n" +
                 "Let us begin... But first, you will be asked to define a size for the cave\n");
-        sb.append("The cave has the shape of a rectangle.");
+        sb.append("The cave has the shape of a rectangle but its edges are connected, think of it as a torus");
         return sb.toString();
     }
 
     public static String askDimension(String dimension){
-        return "What should be its " + dimension + "? " +
-                "(" + GameRunner.MIN_DIMENSION + " - " + GameRunner.MAX_DIMENSION +")";
+        return ColorCodes.GREEN + "What should be its " + dimension + "? " +
+                "(" + GameRunner.MIN_DIMENSION + " - " + GameRunner.MAX_DIMENSION +") ";
     }
 
     public static String wumpusHit() {
